@@ -140,8 +140,15 @@ const TextManager: React.FC<TextManagerProps> = ({ onProgressUpdate }) => {
             totalChunks={currentChapter.chunks.length}
           />
 
-          {/* Back Button */}
+          {/* Navigation to Dashboard */}
           <div className="text-center mt-8">
+            <Button
+              variant="outline"
+              onClick={() => window.location.href = '/dashboard'}
+              className="border-border hover:bg-secondary mr-4"
+            >
+              Browse Library
+            </Button>
             <Button
               variant="outline"
               onClick={() => setCurrentMode('home')}
@@ -170,6 +177,18 @@ const TextManager: React.FC<TextManagerProps> = ({ onProgressUpdate }) => {
             Master typing while reading through your favorite books, textbooks, and articles. 
             Experience seamless progression with real-time feedback and detailed analytics.
           </p>
+        </div>
+
+        {/* Navigation to Dashboard */}
+        <div className="text-center mb-8">
+          <Button 
+            onClick={() => window.location.href = '/dashboard'}
+            variant="outline"
+            className="border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+            size="lg"
+          >
+            Browse Your Library
+          </Button>
         </div>
 
         {/* Main Options */}
