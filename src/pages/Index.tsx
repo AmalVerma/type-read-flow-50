@@ -1,13 +1,30 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import TextManager from '@/components/TextManager';
+
+interface UserProgress {
+  chapter: number;
+  chunkNumber: number;
+  totalChunks: number;
+  wpm: number;
+  accuracy: number;
+  correctChars: number;
+  incorrectChars: number;
+  totalChars: number;
+  timeElapsed: number;
+}
 
 const Index = () => {
+  const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
+
+  const handleProgressUpdate = (progress: UserProgress) => {
+    setUserProgress(progress);
+    console.log('Progress updated:', progress);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <main>
+      <TextManager onProgressUpdate={handleProgressUpdate} />
+    </main>
   );
 };
 

@@ -61,7 +61,25 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Tovel typing feedback colors
+				correct: 'hsl(var(--correct))',
+				incorrect: 'hsl(var(--incorrect))',
+				pending: 'hsl(var(--pending))',
+				current: 'hsl(var(--current))'
+			},
+			backgroundImage: {
+				'gradient-primary': 'var(--gradient-primary)',
+				'gradient-accent': 'var(--gradient-accent)',
+				'gradient-surface': 'var(--gradient-surface)'
+			},
+			boxShadow: {
+				'typing': 'var(--shadow-typing)',
+				'card': 'var(--shadow-card)',
+				'glow': 'var(--shadow-glow)'
+			},
+			fontFamily: {
+				mono: ['SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', 'Consolas', 'Courier New', 'monospace']
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
