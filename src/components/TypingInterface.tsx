@@ -32,6 +32,7 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
   const [currentPage, setCurrentPage] = useState<string[]>(initialCurrentPage);
   const [nextPage, setNextPage] = useState<string[]>(initialNextPage);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
+  const [currentPageNumber, setCurrentPageNumber] = useState(1);
   const [userInput, setUserInput] = useState('');
   const [startTime, setStartTime] = useState<number | null>(null);
   const [stats, setStats] = useState<TypingStats>({
@@ -112,6 +113,7 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
         setTimeout(() => {
           if (currentChunkIndex < currentPage.length - 1) {
             // Move to next chunk in current page
+            console.log('Moving to next chunk:', currentChunkIndex + 1);
             setCurrentChunkIndex(prev => prev + 1);
             setUserInput('');
             setStartTime(null);
@@ -126,6 +128,13 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
               totalChars: 0,
               timeElapsed: 0,
             });
+            
+            // Focus input for next chunk
+            setTimeout(() => {
+              if (inputRef.current) {
+                inputRef.current.focus();
+              }
+            }, 100);
           } else {
             // All chunks completed - move to next page
             console.log('Page completed - Moving to next page');
@@ -135,6 +144,7 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
             setCurrentPage(nextPage);
             setNextPage(getPage());
             setCurrentChunkIndex(0);
+            setCurrentPageNumber(prev => prev + 1);
             setUserInput('');
             setStartTime(null);
             setIsComplete(false);
@@ -150,8 +160,15 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
             });
             
             onPageComplete?.(newStats);
+            
+            // Focus input for next page
+            setTimeout(() => {
+              if (inputRef.current) {
+                inputRef.current.focus();
+              }
+            }, 100);
           }
-        }, 1000);
+        }, 1500);
       }
     }
   };
@@ -191,9 +208,10 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
-      {/* Progress Bar */}
+      {/* Page and Progress Info */}
       <div className="space-y-2">
         <div className="flex justify-between text-sm text-muted-foreground">
+          <span>Page {currentPageNumber}</span>
           <span>Chunk {currentChunkIndex + 1} of {totalChunks}</span>
           <span>{Math.round((userInput.length / currentChunk.length) * 100)}% complete</span>
         </div>
@@ -243,16 +261,19 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
       />
 
       {/* Instructions */}
-      <div className="text-center text-muted-foreground text-sm">
+      <div className="text-center text-muted-foreground text-sm space-y-2">
         {isComplete ? (
           <div className="text-accent font-medium">
-            Chunk completed! Great job! 🎉
+            Chunk completed! Moving to next chunk automatically... 🎉
           </div>
         ) : (
           <div>
             Start typing to begin. Your input is automatically captured.
           </div>
         )}
+        <div className="text-xs">
+          Page {currentPageNumber} • Chunk {currentChunkIndex + 1} of {totalChunks}
+        </div>
       </div>
     </div>
   );
