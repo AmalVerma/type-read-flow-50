@@ -11,18 +11,27 @@ interface TypingStats {
 }
 
 interface TypingInterfaceProps {
-  text: string;
+  initialCurrentPage: string[];
+  initialNextPage: string[];
+  onPageComplete?: (stats: TypingStats) => void;
   onChunkComplete?: (stats: TypingStats) => void;
-  chunkProgress?: number;
-  totalChunks?: number;
 }
 
+// Placeholder function for getting next page
+const getPage = (): string[] => {
+  // TODO: Implement actual page loading logic
+  return ['This is a placeholder chunk for the next page.', 'Another chunk would follow here.'];
+};
+
 const TypingInterface: React.FC<TypingInterfaceProps> = ({
-  text,
+  initialCurrentPage,
+  initialNextPage,
+  onPageComplete,
   onChunkComplete,
-  chunkProgress = 1,
-  totalChunks = 1,
 }) => {
+  const [currentPage, setCurrentPage] = useState<string[]>(initialCurrentPage);
+  const [nextPage, setNextPage] = useState<string[]>(initialNextPage);
+  const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
   const [userInput, setUserInput] = useState('');
   const [startTime, setStartTime] = useState<number | null>(null);
   const [stats, setStats] = useState<TypingStats>({
@@ -36,6 +45,9 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
   const [isComplete, setIsComplete] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  const currentChunk = currentPage[currentChunkIndex] || '';
+  const totalChunks = currentPage.length;
+
   // Calculate current stats
   const calculateStats = useCallback((input: string, startTime: number) => {
     const now = Date.now();
@@ -46,7 +58,7 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
     let incorrectChars = 0;
 
     for (let i = 0; i < input.length; i++) {
-      if (i < text.length && input[i] === text[i]) {
+      if (i < currentChunk.length && input[i] === currentChunk[i]) {
         correctChars++;
       } else {
         incorrectChars++;
@@ -66,7 +78,7 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
       totalChars,
       timeElapsed,
     };
-  }, [text]);
+  }, [currentChunk]);
 
   // Handle input change
   const handleInputChange = (value: string) => {
@@ -74,8 +86,8 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
       setStartTime(Date.now());
     }
 
-    // Prevent typing beyond text length
-    if (value.length > text.length) {
+    // Prevent typing beyond chunk length
+    if (value.length > currentChunk.length) {
       return;
     }
 
@@ -86,9 +98,60 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
       setStats(newStats);
 
       // Check if chunk is complete
-      if (value === text && !isComplete) {
+      if (value === currentChunk && !isComplete) {
         setIsComplete(true);
+        
+        // Console log before resetting analytics
+        console.log('Chunk completed - Current stats:', newStats);
+        console.log('Current chunk index:', currentChunkIndex);
+        console.log('Total chunks in page:', totalChunks);
+        
         onChunkComplete?.(newStats);
+        
+        // Move to next chunk after a short delay
+        setTimeout(() => {
+          if (currentChunkIndex < currentPage.length - 1) {
+            // Move to next chunk in current page
+            setCurrentChunkIndex(prev => prev + 1);
+            setUserInput('');
+            setStartTime(null);
+            setIsComplete(false);
+            
+            // Reset analytics for new chunk
+            setStats({
+              wpm: 0,
+              accuracy: 0,
+              correctChars: 0,
+              incorrectChars: 0,
+              totalChars: 0,
+              timeElapsed: 0,
+            });
+          } else {
+            // All chunks completed - move to next page
+            console.log('Page completed - Moving to next page');
+            console.log('Current page chunks:', currentPage.length);
+            console.log('Next page chunks:', nextPage.length);
+            
+            setCurrentPage(nextPage);
+            setNextPage(getPage());
+            setCurrentChunkIndex(0);
+            setUserInput('');
+            setStartTime(null);
+            setIsComplete(false);
+            
+            // Reset analytics for new page
+            setStats({
+              wpm: 0,
+              accuracy: 0,
+              correctChars: 0,
+              incorrectChars: 0,
+              totalChars: 0,
+              timeElapsed: 0,
+            });
+            
+            onPageComplete?.(newStats);
+          }
+        }, 1000);
       }
     }
   };
@@ -131,13 +194,13 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
       {/* Progress Bar */}
       <div className="space-y-2">
         <div className="flex justify-between text-sm text-muted-foreground">
-          <span>Chunk {chunkProgress} of {totalChunks}</span>
-          <span>{Math.round((userInput.length / text.length) * 100)}% complete</span>
+          <span>Chunk {currentChunkIndex + 1} of {totalChunks}</span>
+          <span>{Math.round((userInput.length / currentChunk.length) * 100)}% complete</span>
         </div>
         <div className="w-full bg-secondary rounded-full h-2">
           <div
             className="bg-gradient-primary h-2 rounded-full transition-all duration-300 ease-out"
-            style={{ width: `${(userInput.length / text.length) * 100}%` }}
+            style={{ width: `${(userInput.length / currentChunk.length) * 100}%` }}
           />
         </div>
       </div>
@@ -165,7 +228,7 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
       {/* Text Display */}
       <Card className="p-8 bg-gradient-surface border-border/50 shadow-card">
         <div className="typing-text leading-relaxed whitespace-pre-wrap break-words">
-          {text.split('').map((char, index) => renderCharacter(char, index))}
+          {currentChunk.split('').map((char, index) => renderCharacter(char, index))}
         </div>
       </Card>
 

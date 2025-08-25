@@ -134,10 +134,9 @@ const TextManager: React.FC<TextManagerProps> = ({ onProgressUpdate }) => {
           </div>
 
           <TypingInterface
-            text={currentChunk.text}
+            initialCurrentPage={currentChapter.chunks.map(chunk => chunk.text)}
+            initialNextPage={['Sample next page chunk 1', 'Sample next page chunk 2']}
             onChunkComplete={handleChunkComplete}
-            chunkProgress={currentChunkIndex + 1}
-            totalChunks={currentChapter.chunks.length}
           />
 
           {/* Navigation to Dashboard */}

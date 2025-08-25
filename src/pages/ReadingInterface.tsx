@@ -113,10 +113,9 @@ const ReadingInterface = () => {
 
         {/* Typing Interface */}
         <TypingInterface
-          text={currentChunk.text}
+          initialCurrentPage={chapter.chunks.map(chunk => chunk.text)}
+          initialNextPage={['Next chapter chunk 1', 'Next chapter chunk 2']}
           onChunkComplete={handleChunkComplete}
-          chunkProgress={currentChunkIndex + 1}
-          totalChunks={chapter.chunks.length}
         />
 
         {/* Chapter Progress */}
