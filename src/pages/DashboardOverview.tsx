@@ -17,6 +17,7 @@ import {
   Timer
 } from 'lucide-react';
 import NovelCard from '@/components/NovelCard';
+import AddNovelDialog from '@/components/AddNovelDialog';
 import { db } from '@/lib/indexeddb';
 import { Novel } from '@/types';
 
@@ -25,18 +26,18 @@ const DashboardOverview = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Load novels from IndexedDB
-  useEffect(() => {
-    const loadNovels = async () => {
-      try {
-        const storedNovels = await db.getAllNovels();
-        setNovels(storedNovels);
-      } catch (error) {
-        console.error('Failed to load novels:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const loadNovels = async () => {
+    try {
+      const storedNovels = await db.getAllNovels();
+      setNovels(storedNovels);
+    } catch (error) {
+      console.error('Failed to load novels:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadNovels();
   }, []);
 
@@ -227,10 +228,15 @@ const DashboardOverview = () => {
               <CardTitle className="text-lg">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full bg-gradient-primary hover:shadow-typing transition-all duration-300">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Novel
-              </Button>
+              <AddNovelDialog 
+                onNovelAdded={loadNovels}
+                trigger={
+                  <Button className="w-full bg-gradient-primary hover:shadow-typing transition-all duration-300">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Novel
+                  </Button>
+                }
+              />
               <Button variant="outline" className="w-full">
                 <Timer className="w-4 h-4 mr-2" />
                 Start Session

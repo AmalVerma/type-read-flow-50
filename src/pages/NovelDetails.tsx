@@ -1,214 +1,258 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Book, Calendar, FileText, Plus, Settings } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { 
+  ArrowLeft,
+  BookOpen,
+  Clock,
+  Target,
+  Plus,
+  Play,
+  FileText,
+  Calendar,
+  User,
+  Tag
+} from 'lucide-react';
+import { Novel, Chapter } from '@/types';
+import { useNovels, useChapters } from '@/hooks/useIndexedDB';
 import ChapterCard from '@/components/ChapterCard';
 import AddChapterDialog from '@/components/AddChapterDialog';
-import { mockNovels } from '@/data/mockData';
-import { Novel } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 const NovelDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [novel, setNovel] = useState<Novel | null>(
-    mockNovels.find(n => n.id === id) || null
-  );
+  const [novel, setNovel] = useState<Novel | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const { novels } = useNovels();
+  const { chapters, isLoading: chaptersLoading, refreshChapters } = useChapters(id || '');
+  const { toast } = useToast();
 
-  if (!novel) {
+  useEffect(() => {
+    if (id && novels.length > 0) {
+      const foundNovel = novels.find(n => n.id === id);
+      if (foundNovel) {
+        setNovel(foundNovel);
+      } else {
+        toast({
+          title: "Novel not found",
+          description: "The requested novel could not be found.",
+          variant: "destructive"
+        });
+        navigate('/dashboard/library');
+      }
+      setIsLoading(false);
+    }
+  }, [id, novels, navigate, toast]);
+
+  const handleChapterAdded = () => {
+    refreshChapters();
+  };
+
+  const handleStartReading = (chapterId: string) => {
+    if (novel) {
+      navigate(`/reading/${novel.id}/${chapterId}`);
+    }
+  };
+
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="p-8 text-center bg-gradient-surface border-border/50">
-          <h2 className="text-2xl font-bold text-foreground mb-4">Novel Not Found</h2>
-          <p className="text-muted-foreground mb-6">The novel you're looking for doesn't exist.</p>
-          <Button onClick={() => navigate('/dashboard')} className="bg-gradient-primary">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
-        </Card>
+      <div className="p-6">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
       </div>
     );
   }
 
-  const progressPercentage = (novel.completedChapters / novel.totalChapters) * 100;
-  
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    }).format(date);
-  };
+  if (!novel) {
+    return (
+      <div className="p-6 text-center">
+        <h1 className="text-2xl font-bold text-muted-foreground">Novel not found</h1>
+        <Button onClick={() => navigate('/dashboard/library')} className="mt-4">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Library
+        </Button>
+      </div>
+    );
+  }
 
-  const handleChapterAdded = () => {
-    // In a real app, this would refresh the novel data
-    console.log('Chapter added successfully');
-  };
+  const progressPercentage = novel.totalChapters > 0 ? (novel.completedChapters / novel.totalChapters) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/dashboard')}
-              className="border-border hover:bg-secondary"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Library
-            </Button>
-            <div className="flex items-center space-x-3">
-              <AddChapterDialog novelId={novel.id} onChapterAdded={handleChapterAdded} />
-              <Button variant="outline" className="border-border hover:bg-secondary">
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </Button>
+    <div className="p-6 space-y-6 max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center space-x-4">
+        <Button 
+          variant="outline" 
+          onClick={() => navigate('/dashboard/library')}
+          className="border-border hover:bg-secondary"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Library
+        </Button>
+        <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+          Novel Details
+        </h1>
+      </div>
+
+      {/* Novel Info */}
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Novel Cover & Basic Info */}
+        <Card className="lg:col-span-1 bg-gradient-surface border-border/50">
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {/* Cover */}
+              <div className="w-full h-64 bg-gradient-primary rounded-lg flex items-center justify-center">
+                {novel.coverImage ? (
+                  <img 
+                    src={novel.coverImage} 
+                    alt={`${novel.title} cover`} 
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                ) : (
+                  <BookOpen className="w-16 h-16 text-primary-foreground" />
+                )}
+              </div>
+
+              {/* Title & Author */}
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-bold text-foreground">{novel.title}</h2>
+                <div className="flex items-center justify-center space-x-2 text-muted-foreground">
+                  <User className="w-4 h-4" />
+                  <span>{novel.author}</span>
+                </div>
+              </div>
+
+              {/* Tags */}
+              {novel.tags.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 text-sm font-medium">
+                    <Tag className="w-4 h-4" />
+                    <span>Tags</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {novel.tags.map((tag) => (
+                      <Badge key={tag} variant="secondary">{tag}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Progress */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Overall Progress</span>
+                  <span>{novel.completedChapters}/{novel.totalChapters}</span>
+                </div>
+                <Progress value={progressPercentage} className="h-2" />
+                <p className="text-xs text-center text-muted-foreground">
+                  {progressPercentage.toFixed(1)}% Complete
+                </p>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Description & Stats */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Description */}
+          {novel.description && (
+            <Card className="bg-gradient-surface border-border/50">
+              <CardHeader>
+                <CardTitle>Description</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground leading-relaxed">
+                  {novel.description}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="p-4 bg-gradient-surface border-border/50 text-center">
+              <div className="text-2xl font-bold text-foreground">{chapters.length}</div>
+              <div className="text-sm text-muted-foreground">Total Chapters</div>
+            </Card>
+            
+            <Card className="p-4 bg-gradient-surface border-border/50 text-center">
+              <div className="text-2xl font-bold text-foreground">{novel.completedChapters}</div>
+              <div className="text-sm text-muted-foreground">Completed</div>
+            </Card>
+            
+            <Card className="p-4 bg-gradient-surface border-border/50 text-center">
+              <div className="text-2xl font-bold text-foreground">
+                {chapters.reduce((acc, ch) => acc + ch.wordCount, 0).toLocaleString()}
+              </div>
+              <div className="text-sm text-muted-foreground">Total Words</div>
+            </Card>
+            
+            <Card className="p-4 bg-gradient-surface border-border/50 text-center">
+              <div className="text-2xl font-bold text-foreground">
+                {chapters.filter(ch => ch.status === 'current').length}
+              </div>
+              <div className="text-sm text-muted-foreground">In Progress</div>
+            </Card>
           </div>
-
-          {/* Novel Info Card */}
-          <Card className="p-8 bg-gradient-surface border-border/50 shadow-card">
-            <div className="grid md:grid-cols-3 gap-8">
-              {/* Book Cover Placeholder */}
-              <div className="md:col-span-1">
-                <div className="aspect-[3/4] bg-gradient-primary rounded-lg flex items-center justify-center shadow-typing">
-                  <Book className="w-16 h-16 text-primary-foreground" />
-                </div>
-              </div>
-
-              {/* Book Details */}
-              <div className="md:col-span-2 space-y-6">
-                <div>
-                  <h1 className="text-3xl font-bold text-foreground mb-2">
-                    {novel.title}
-                  </h1>
-                  <p className="text-xl text-muted-foreground mb-4">by {novel.author}</p>
-                  <p className="text-foreground leading-relaxed">
-                    {novel.description}
-                  </p>
-                </div>
-
-                {/* Progress Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-foreground">Reading Progress</h3>
-                    <span className="text-2xl font-bold text-primary">
-                      {novel.completedChapters}/{novel.totalChapters}
-                    </span>
-                  </div>
-                  <Progress value={progressPercentage} className="h-3" />
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>{Math.round(progressPercentage)}% complete</span>
-                    <span>Chapter {novel.currentChapter} in progress</span>
-                  </div>
-                </div>
-
-                {/* Metadata */}
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4" />
-                    <span>Added {formatDate(novel.createdAt)}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <FileText className="w-4 h-4" />
-                    <span>Last read {formatDate(novel.lastReadAt)}</span>
-                  </div>
-                </div>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2">
-                  {novel.tags.map((tag) => (
-                    <Badge 
-                      key={tag} 
-                      variant="secondary" 
-                      className="bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </Card>
         </div>
+      </div>
 
-        {/* Chapters Section */}
-        <div className="space-y-6">
+      {/* Chapters Section */}
+      <Card className="bg-gradient-surface border-border/50">
+        <CardHeader>
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-foreground">Chapters</h2>
-            <div className="text-sm text-muted-foreground">
-              {novel.chapters.length} of {novel.totalChapters} chapters available
-            </div>
+            <CardTitle className="flex items-center space-x-2">
+              <FileText className="w-5 h-5 text-primary" />
+              <span>Chapters ({chapters.length})</span>
+            </CardTitle>
+            <AddChapterDialog 
+              novelId={novel.id}
+              onChapterAdded={handleChapterAdded}
+            />
           </div>
-
-          {/* Chapters Grid */}
-          {novel.chapters.length === 0 ? (
-            <Card className="p-12 text-center bg-gradient-surface border-border/50">
+        </CardHeader>
+        <CardContent>
+          {chaptersLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading chapters...</p>
+            </div>
+          ) : chapters.length === 0 ? (
+            <div className="text-center py-12">
               <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-foreground mb-2">No chapters yet</h3>
               <p className="text-muted-foreground mb-6">
-                Start building your novel by adding the first chapter.
+                Add your first chapter to start your typing journey with this novel.
               </p>
-              <AddChapterDialog novelId={novel.id} onChapterAdded={handleChapterAdded} />
-            </Card>
+              <AddChapterDialog 
+                novelId={novel.id}
+                onChapterAdded={handleChapterAdded}
+                trigger={
+                  <Button className="bg-gradient-primary hover:shadow-typing transition-all duration-300">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add First Chapter
+                  </Button>
+                }
+              />
+            </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {novel.chapters.map((chapter, index) => (
-                <ChapterCard
-                  key={chapter.id}
-                  chapter={chapter}
-                  novelId={novel.id}
+            <div className="grid gap-4">
+              {chapters.map((chapter, index) => (
+                <ChapterCard 
+                  key={chapter.id} 
+                  chapter={chapter} 
                   chapterNumber={index + 1}
+                  onStartReading={() => handleStartReading(chapter.id)}
                 />
               ))}
-              
-              {/* Add Chapter Card */}
-              <Card className="p-6 border-2 border-dashed border-border/50 hover:border-primary/50 transition-colors duration-300">
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
-                    <Plus className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-foreground mb-1">Add New Chapter</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Upload your next chapter to continue the story
-                    </p>
-                    <AddChapterDialog novelId={novel.id} onChapterAdded={handleChapterAdded} />
-                  </div>
-                </div>
-              </Card>
             </div>
           )}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="mt-12 flex justify-center">
-          <Card className="p-6 bg-gradient-surface border-border/50 shadow-card">
-            <div className="flex items-center space-x-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-accent">{novel.completedChapters}</div>
-                <div className="text-sm text-muted-foreground">Completed</div>
-              </div>
-              <div className="w-px h-12 bg-border"></div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-current">1</div>
-                <div className="text-sm text-muted-foreground">In Progress</div>
-              </div>
-              <div className="w-px h-12 bg-border"></div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-muted-foreground">
-                  {novel.totalChapters - novel.completedChapters - 1}
-                </div>
-                <div className="text-sm text-muted-foreground">Pending</div>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, BookOpen, Filter, SortAsc } from 'lucide-react';
 import NovelCard from '@/components/NovelCard';
+import AddNovelDialog from '@/components/AddNovelDialog';
 import { db } from '@/lib/indexeddb';
 import { Novel } from '@/types';
 
@@ -72,10 +73,17 @@ const DashboardLibrary = () => {
             Manage and organize your novel collection
           </p>
         </div>
-        <Button className="bg-gradient-primary hover:shadow-typing transition-all duration-300">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Novel
-        </Button>
+        <AddNovelDialog onNovelAdded={() => {
+          const loadNovels = async () => {
+            try {
+              const storedNovels = await db.getAllNovels();
+              setNovels(storedNovels);
+            } catch (error) {
+              console.error('Failed to load novels:', error);
+            }
+          };
+          loadNovels();
+        }} />
       </div>
 
       {/* Library Stats */}

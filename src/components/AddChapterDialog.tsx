@@ -1,235 +1,334 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
-import { Plus, Upload, FileText, File, Book } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Plus, FileText, Upload } from 'lucide-react';
+import { Chapter } from '@/types';
+import { useChapters, useFileUpload } from '@/hooks/useIndexedDB';
 import { useToast } from '@/hooks/use-toast';
 
 interface AddChapterDialogProps {
   novelId: string;
-  onChapterAdded?: () => void;
+  trigger?: React.ReactNode;
+  onChapterAdded?: (chapter: Chapter) => void;
 }
 
-const AddChapterDialog: React.FC<AddChapterDialogProps> = ({ novelId, onChapterAdded }) => {
+const AddChapterDialog: React.FC<AddChapterDialogProps> = ({ novelId, trigger, onChapterAdded }) => {
   const [open, setOpen] = useState(false);
-  const [chapterTitle, setChapterTitle] = useState('');
-  const [chapterText, setChapterText] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploadMethod, setUploadMethod] = useState<'text' | 'file'>('text');
-  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    content: '',
+    fileType: 'txt' as 'pdf' | 'epub' | 'txt'
+  });
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { saveChapter } = useChapters(novelId);
+  const { uploadFile, getFileAsText, isUploading } = useFileUpload();
   const { toast } = useToast();
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const allowedTypes = ['text/plain', 'application/pdf', 'application/epub+zip'];
-      if (allowedTypes.includes(file.type) || file.name.endsWith('.epub')) {
-        setSelectedFile(file);
-        if (!chapterTitle) {
-          setChapterTitle(file.name.replace(/\.[^/.]+$/, ''));
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['.txt', '.pdf', '.epub'];
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    
+    if (!allowedTypes.includes(fileExtension)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a TXT, PDF, or EPUB file.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setUploadedFile(file);
+      const fileId = await uploadFile(file);
+      
+      if (fileId) {
+        // Try to extract text content for TXT files
+        if (fileExtension === '.txt') {
+          const textContent = await getFileAsText(fileId);
+          if (textContent) {
+            setFormData(prev => ({
+              ...prev,
+              content: textContent,
+              fileType: 'txt'
+            }));
+          }
+        } else {
+          // For PDF and EPUB, we'll store the file ID and handle processing later
+          setFormData(prev => ({
+            ...prev,
+            fileType: fileExtension.slice(1) as 'pdf' | 'epub'
+          }));
         }
-      } else {
-        toast({
-          title: 'Invalid File Type',
-          description: 'Please upload a PDF, EPUB, or TXT file.',
-          variant: 'destructive',
+        
+        // Auto-fill title if empty
+        if (!formData.title) {
+          const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+          setFormData(prev => ({ ...prev, title: fileName }));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to process file:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process the uploaded file.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Function to split text into chunks
+  const chunkText = (text: string, minWords: number = 40) => {
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const chunks = [];
+    let currentChunk = '';
+    let chunkId = 0;
+
+    for (const sentence of sentences) {
+      const trimmedSentence = sentence.trim();
+      if (!trimmedSentence) continue;
+
+      const testChunk = currentChunk + (currentChunk ? '. ' : '') + trimmedSentence + '.';
+      const wordCount = testChunk.split(/\s+/).length;
+
+      if (wordCount >= minWords && currentChunk) {
+        chunks.push({
+          id: chunkId++,
+          text: currentChunk.trim(),
+          wordCount: currentChunk.split(/\s+/).length
         });
+        currentChunk = trimmedSentence + '.';
+      } else {
+        currentChunk = testChunk;
       }
     }
+
+    if (currentChunk.trim()) {
+      chunks.push({
+        id: chunkId++,
+        text: currentChunk.trim(),
+        wordCount: currentChunk.split(/\s+/).length
+      });
+    }
+
+    return chunks;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    
+    if (!formData.title.trim()) {
+      toast({
+        title: "Missing title",
+        description: "Please provide a title for the chapter.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.content.trim() && !uploadedFile) {
+      toast({
+        title: "Missing content",
+        description: "Please provide content or upload a file.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
-      // Simulate upload process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast({
-        title: 'Chapter Added',
-        description: `"${chapterTitle}" has been successfully added to your novel.`,
-      });
+      const chunks = formData.content ? chunkText(formData.content) : [];
+      const wordCount = chunks.reduce((acc, chunk) => acc + chunk.wordCount, 0);
 
-      // Reset form
-      setChapterTitle('');
-      setChapterText('');
-      setSelectedFile(null);
-      setOpen(false);
-      onChapterAdded?.();
+      const newChapter: Chapter & { novelId: string } = {
+        id: `chapter_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        novelId,
+        title: formData.title.trim(),
+        status: 'pending',
+        wordCount,
+        progress: 0,
+        chunks,
+        uploadedAt: new Date(),
+        fileType: formData.fileType
+      };
+
+      const success = await saveChapter(newChapter);
+      
+      if (success) {
+        toast({
+          title: "Chapter added successfully!",
+          description: `"${newChapter.title}" has been added to the novel.`,
+        });
+        
+        onChapterAdded?.(newChapter);
+        
+        // Reset form
+        setFormData({
+          title: '',
+          content: '',
+          fileType: 'txt'
+        });
+        setUploadedFile(null);
+        setOpen(false);
+      } else {
+        throw new Error('Failed to save chapter');
+      }
     } catch (error) {
+      console.error('Failed to add chapter:', error);
       toast({
-        title: 'Upload Failed',
-        description: 'There was an error adding your chapter. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to add chapter. Please try again.",
+        variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const getFileIcon = (fileName: string) => {
-    if (fileName.endsWith('.pdf')) return <File className="w-4 h-4 text-red-500" />;
-    if (fileName.endsWith('.epub')) return <Book className="w-4 h-4 text-blue-500" />;
-    if (fileName.endsWith('.txt')) return <FileText className="w-4 h-4 text-green-500" />;
-    return <File className="w-4 h-4" />;
-  };
+  const defaultTrigger = (
+    <Button variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">
+      <Plus className="w-4 h-4 mr-2" />
+      Add Chapter
+    </Button>
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-gradient-primary hover:shadow-typing transition-all duration-300">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Chapter
-        </Button>
+        {trigger || defaultTrigger}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] bg-card border-border">
+      <DialogContent className="sm:max-w-[600px] bg-background border-border max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Add New Chapter
+          <DialogTitle className="flex items-center space-x-2">
+            <FileText className="w-5 h-5 text-primary" />
+            <span>Add New Chapter</span>
           </DialogTitle>
+          <DialogDescription>
+            Add a new chapter by typing content or uploading a file.
+          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Chapter Title */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium">
-              Chapter Title
-            </Label>
+            <Label htmlFor="chapter-title">Chapter Title *</Label>
             <Input
-              id="title"
-              value={chapterTitle}
-              onChange={(e) => setChapterTitle(e.target.value)}
+              id="chapter-title"
               placeholder="Enter chapter title..."
+              value={formData.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
               className="bg-input border-border focus:border-primary"
               required
             />
           </div>
 
-          {/* Upload Method Selection */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Content Source</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <Card 
-                className={`p-4 cursor-pointer transition-all duration-200 ${
-                  uploadMethod === 'text' 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-border hover:bg-muted/50'
-                }`}
-                onClick={() => setUploadMethod('text')}
-              >
-                <div className="flex items-center space-x-3">
-                  <FileText className="w-5 h-5" />
-                  <div>
-                    <h4 className="font-medium">Paste Text</h4>
-                    <p className="text-xs text-muted-foreground">Enter text directly</p>
-                  </div>
-                </div>
-              </Card>
-              <Card 
-                className={`p-4 cursor-pointer transition-all duration-200 ${
-                  uploadMethod === 'file' 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-border hover:bg-muted/50'
-                }`}
-                onClick={() => setUploadMethod('file')}
-              >
-                <div className="flex items-center space-x-3">
-                  <Upload className="w-5 h-5" />
-                  <div>
-                    <h4 className="font-medium">Upload File</h4>
-                    <p className="text-xs text-muted-foreground">PDF, EPUB, or TXT</p>
-                  </div>
-                </div>
-              </Card>
-            </div>
+          {/* File Type */}
+          <div className="space-y-2">
+            <Label htmlFor="file-type">File Type</Label>
+            <Select value={formData.fileType} onValueChange={(value) => handleInputChange('fileType', value)}>
+              <SelectTrigger className="bg-input border-border focus:border-primary">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background border-border">
+                <SelectItem value="txt">Text (.txt)</SelectItem>
+                <SelectItem value="pdf">PDF (.pdf)</SelectItem>
+                <SelectItem value="epub">EPUB (.epub)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Content Input */}
-          {uploadMethod === 'text' ? (
-            <div className="space-y-2">
-              <Label htmlFor="content" className="text-sm font-medium">
-                Chapter Content
-              </Label>
-              <Textarea
-                id="content"
-                value={chapterText}
-                onChange={(e) => setChapterText(e.target.value)}
-                placeholder="Paste your chapter content here..."
-                className="min-h-[200px] bg-input border-border focus:border-primary resize-none"
-                required
+          {/* File Upload */}
+          <div className="space-y-2">
+            <Label htmlFor="file-upload">Upload File</Label>
+            <div className="flex items-center space-x-2">
+              <Input
+                id="file-upload"
+                type="file"
+                accept=".txt,.pdf,.epub"
+                onChange={handleFileUpload}
+                className="bg-input border-border focus:border-primary file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-muted file:text-muted-foreground hover:file:bg-muted/80"
+                disabled={isUploading}
               />
-              <p className="text-xs text-muted-foreground">
-                {chapterText.length > 0 && `${chapterText.split(/\s+/).length} words`}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Label htmlFor="file" className="text-sm font-medium">
-                Upload File
-              </Label>
-              <div className="space-y-3">
-                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors">
-                  <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Click to upload or drag and drop
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    PDF, EPUB, or TXT files only
-                  </p>
-                  <Input
-                    id="file"
-                    type="file"
-                    onChange={handleFileChange}
-                    accept=".pdf,.epub,.txt,text/plain,application/pdf,application/epub+zip"
-                    className="hidden"
-                  />
-                  <Label 
-                    htmlFor="file" 
-                    className="inline-block mt-3 px-4 py-2 bg-secondary text-secondary-foreground rounded-md cursor-pointer hover:bg-secondary/80"
-                  >
-                    Choose File
-                  </Label>
+              {uploadedFile && (
+                <div className="text-sm text-muted-foreground">
+                  {uploadedFile.name}
                 </div>
-
-                {selectedFile && (
-                  <Card className="p-3 bg-accent/5 border-accent/20">
-                    <div className="flex items-center space-x-3">
-                      {getFileIcon(selectedFile.name)}
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{selectedFile.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                )}
-              </div>
+              )}
             </div>
-          )}
+            {isUploading && (
+              <p className="text-sm text-muted-foreground">Processing file...</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Supported formats: TXT, PDF, EPUB
+            </p>
+          </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-end space-x-3 pt-4">
+          {/* Content Textarea (shown if no file uploaded or for additional content) */}
+          <div className="space-y-2">
+            <Label htmlFor="content">
+              Content {uploadedFile ? '(Additional/Override)' : '*'}
+            </Label>
+            <Textarea
+              id="content"
+              placeholder="Enter chapter content or paste text here..."
+              value={formData.content}
+              onChange={(e) => handleInputChange('content', e.target.value)}
+              className="bg-input border-border focus:border-primary min-h-[200px]"
+              required={!uploadedFile}
+            />
+            <p className="text-xs text-muted-foreground">
+              Text will be automatically split into typing chunks of approximately 40 words each.
+            </p>
+          </div>
+
+          <DialogFooter>
             <Button 
               type="button" 
               variant="outline" 
               onClick={() => setOpen(false)}
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button 
               type="submit" 
-              disabled={isLoading || !chapterTitle || (uploadMethod === 'text' ? !chapterText : !selectedFile)}
               className="bg-gradient-primary hover:shadow-typing transition-all duration-300"
+              disabled={isSubmitting || isUploading}
             >
-              {isLoading ? 'Adding...' : 'Add Chapter'}
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full mr-2" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Chapter
+                </>
+              )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

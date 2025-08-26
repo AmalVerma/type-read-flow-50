@@ -35,7 +35,7 @@ const App = () => (
             <Route path="settings" element={<div className="p-6"><h1 className="text-2xl font-bold">Settings</h1><p className="text-muted-foreground">Coming soon...</p></div>} />
           </Route>
           <Route path="/novel/:id" element={<NovelDetails />} />
-          <Route path="/read/:novelId/:chapterId" element={<ReadingInterface />} />
+          <Route path="/reading/:novelId/:chapterId" element={<ReadingInterface />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
