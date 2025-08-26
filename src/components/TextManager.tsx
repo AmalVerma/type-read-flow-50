@@ -1,8 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FileText, Upload, Play } from 'lucide-react';
 import TypingInterface from './TypingInterface';
+import { db } from '@/lib/indexeddb';
+import { useFileUpload } from '@/hooks/useIndexedDB';
 
 interface Chunk {
   id: number;
@@ -31,13 +33,15 @@ Welcome to the future of reading and typing practice. Welcome to a world where e
 
 const TextManager: React.FC<TextManagerProps> = ({ onProgressUpdate }) => {
   const [currentMode, setCurrentMode] = useState<'home' | 'typing'>('home');
-  const [currentChapter] = useState<Chapter>({
+  const [currentChapter, setCurrentChapter] = useState<Chapter>({
     id: 1,
     title: 'Getting Started with Tovel',
     chunks: chunkText(sampleText, 40)
   });
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
   const [userText, setUserText] = useState('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const { uploadFile, getFileAsText, isUploading } = useFileUpload();
 
   // Function to split text into chunks of at least 40 words
   function chunkText(text: string, minWords: number): Chunk[] {
@@ -78,13 +82,16 @@ const TextManager: React.FC<TextManagerProps> = ({ onProgressUpdate }) => {
     return chunks;
   }
 
-  const handleChunkComplete = useCallback((stats: any) => {
-    onProgressUpdate?.({
+  const handleChunkComplete = useCallback(async (stats: any) => {
+    const progressData = {
       chapter: currentChapter.id,
       chunkNumber: currentChunkIndex + 1,
       totalChunks: currentChapter.chunks.length,
       ...stats
-    });
+    };
+
+    onProgressUpdate?.(progressData);
+    await saveProgressToDB(progressData);
 
     // Move to next chunk after a delay
     setTimeout(() => {
@@ -104,16 +111,58 @@ const TextManager: React.FC<TextManagerProps> = ({ onProgressUpdate }) => {
     setCurrentChunkIndex(0);
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const fileId = await uploadFile(file);
+      if (fileId) {
+        const text = await getFileAsText(fileId);
+        if (text) {
+          setUserText(text);
+          setUploadedFile(file);
+          const customChapter: Chapter = {
+            id: 999,
+            title: file.name,
+            chunks: chunkText(text, 40)
+          };
+          setCurrentChapter(customChapter);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to process file:', error);
+    }
+  };
+
   const handleCustomText = () => {
     if (userText.trim()) {
       const customChapter: Chapter = {
         id: 999,
-        title: 'Custom Text',
+        title: uploadedFile?.name || 'Custom Text',
         chunks: chunkText(userText, 40)
       };
-      // For now, we'll just start with the sample text
-      // In the full implementation, we'd handle custom text here
+      setCurrentChapter(customChapter);
       handleStartTyping();
+    }
+  };
+
+  // Save progress to IndexedDB
+  const saveProgressToDB = async (progressData: any) => {
+    try {
+      const progress = {
+        id: `${progressData.chapter}_${progressData.chunkNumber}_${Date.now()}`,
+        novelId: 'sample-novel',
+        chapterId: progressData.chapter.toString(),
+        chunkNumber: progressData.chunkNumber,
+        wpm: progressData.wpm,
+        accuracy: progressData.accuracy,
+        timeSpent: progressData.timeElapsed,
+        lastUpdated: new Date()
+      };
+      await db.saveProgress(progress);
+    } catch (error) {
+      console.error('Failed to save progress:', error);
     }
   };
 
@@ -230,6 +279,18 @@ const TextManager: React.FC<TextManagerProps> = ({ onProgressUpdate }) => {
                   placeholder="Paste your text here..."
                   className="w-full h-32 p-3 bg-input border border-border rounded-md text-foreground resize-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
+                <div className="space-y-2">
+                  <input
+                    type="file"
+                    accept=".txt,.pdf,.epub"
+                    onChange={handleFileUpload}
+                    className="w-full p-2 bg-input border border-border rounded-md text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                    disabled={isUploading}
+                  />
+                  {isUploading && (
+                    <p className="text-sm text-muted-foreground">Uploading file...</p>
+                  )}
+                </div>
                 <Button 
                   onClick={handleCustomText}
                   variant="outline"

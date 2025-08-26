@@ -1,18 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, BookOpen, Filter, SortAsc } from 'lucide-react';
 import NovelCard from '@/components/NovelCard';
-import { mockNovels } from '@/data/mockData';
+import { db } from '@/lib/indexeddb';
 import { Novel } from '@/types';
 
 const DashboardLibrary = () => {
-  const [novels] = useState<Novel[]>(mockNovels);
+  const [novels, setNovels] = useState<Novel[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [sortBy, setSortBy] = useState<'title' | 'progress' | 'lastRead'>('lastRead');
+
+  // Load novels from IndexedDB
+  useEffect(() => {
+    const loadNovels = async () => {
+      try {
+        const storedNovels = await db.getAllNovels();
+        setNovels(storedNovels);
+      } catch (error) {
+        console.error('Failed to load novels:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadNovels();
+  }, []);
 
   // Filter and sort novels
   const filteredNovels = novels
@@ -145,7 +162,12 @@ const DashboardLibrary = () => {
 
       {/* Novels Grid */}
       <div className="space-y-6">
-        {filteredNovels.length === 0 ? (
+        {isLoading ? (
+          <Card className="p-12 text-center bg-gradient-surface border-border/50">
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading your library...</p>
+          </Card>
+        ) : filteredNovels.length === 0 ? (
           <Card className="p-12 text-center bg-gradient-surface border-border/50">
             <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-2">No novels found</h3>

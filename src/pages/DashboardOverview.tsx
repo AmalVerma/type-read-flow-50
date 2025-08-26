@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,11 +17,28 @@ import {
   Timer
 } from 'lucide-react';
 import NovelCard from '@/components/NovelCard';
-import { mockNovels } from '@/data/mockData';
+import { db } from '@/lib/indexeddb';
 import { Novel } from '@/types';
 
 const DashboardOverview = () => {
-  const [novels] = useState<Novel[]>(mockNovels);
+  const [novels, setNovels] = useState<Novel[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load novels from IndexedDB
+  useEffect(() => {
+    const loadNovels = async () => {
+      try {
+        const storedNovels = await db.getAllNovels();
+        setNovels(storedNovels);
+      } catch (error) {
+        console.error('Failed to load novels:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadNovels();
+  }, []);
 
   // Calculate dashboard stats
   const totalChapters = novels.reduce((acc, novel) => acc + novel.totalChapters, 0);
