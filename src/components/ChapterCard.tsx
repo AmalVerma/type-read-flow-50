@@ -11,9 +11,10 @@ interface ChapterCardProps {
   chapter: Chapter;
   novelId: string;
   chapterNumber: number;
+  onStartReading?: () => void;
 }
 
-const ChapterCard: React.FC<ChapterCardProps> = ({ chapter, novelId, chapterNumber }) => {
+const ChapterCard: React.FC<ChapterCardProps> = ({ chapter, novelId, chapterNumber, onStartReading }) => {
   const navigate = useNavigate();
 
   const getStatusIcon = () => {
@@ -56,8 +57,12 @@ const ChapterCard: React.FC<ChapterCardProps> = ({ chapter, novelId, chapterNumb
   };
 
   const handleStartReading = () => {
-    // Navigate to typing interface with this chapter
-    navigate(`/read/${novelId}/${chapter.id}`);
+    if (onStartReading) {
+      onStartReading();
+    } else {
+      // Navigate to typing interface with this chapter
+      navigate(`/read/${novelId}/${chapter.id}`);
+    }
   };
 
   const formatDate = (date: Date) => {

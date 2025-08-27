@@ -245,6 +245,7 @@ const NovelDetails = () => {
                 <ChapterCard 
                   key={chapter.id} 
                   chapter={chapter} 
+                  novelId={novel.id}
                   chapterNumber={index + 1}
                   onStartReading={() => handleStartReading(chapter.id)}
                 />
