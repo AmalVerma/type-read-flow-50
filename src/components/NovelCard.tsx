@@ -32,8 +32,11 @@ const NovelCard: React.FC<NovelCardProps> = ({ novel }) => {
   };
 
   return (
-    <Card className="bg-gradient-surface border-border/50 shadow-card hover:shadow-glow transition-all duration-300 overflow-hidden group">
-      <CardContent className="p-0">
+    <Card 
+      className="bg-gradient-surface border-border/50 shadow-card hover:shadow-glow transition-all duration-300 overflow-hidden group cursor-pointer h-full"
+      onClick={handleViewDetails}
+    >
+      <CardContent className="p-0 h-full">
         <div className="flex h-48">
           {/* Cover Image */}
           <div className="w-32 flex-shrink-0 bg-gradient-primary flex items-center justify-center">
@@ -49,14 +52,11 @@ const NovelCard: React.FC<NovelCardProps> = ({ novel }) => {
           </div>
 
           {/* Content */}
-          <div className="flex-1 p-4 flex flex-col justify-between">
-            <div className="space-y-2">
+          <div className="flex-1 p-4 flex flex-col justify-between min-h-0">
+            <div className="space-y-2 flex-1">
               {/* Title & Author */}
               <div>
-                <h3 
-                  className="font-semibold text-foreground line-clamp-2 cursor-pointer hover:text-primary transition-colors"
-                  onClick={handleViewDetails}
-                >
+                <h3 className="font-semibold text-foreground line-clamp-2 hover:text-primary transition-colors">
                   {novel.title}
                 </h3>
                 <div className="flex items-center space-x-1 text-sm text-muted-foreground">
@@ -90,7 +90,7 @@ const NovelCard: React.FC<NovelCardProps> = ({ novel }) => {
             </div>
 
             {/* Footer */}
-            <div className="space-y-3">
+            <div className="space-y-3 mt-auto">
               {/* Progress */}
               <div className="space-y-1">
                 <div className="flex justify-between text-xs text-muted-foreground">
@@ -110,7 +110,10 @@ const NovelCard: React.FC<NovelCardProps> = ({ novel }) => {
               <div className="flex space-x-2">
                 <Button 
                   size="sm" 
-                  onClick={handleContinueReading}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleContinueReading();
+                  }}
                   className="flex-1 bg-gradient-primary hover:shadow-typing transition-all duration-300"
                   disabled={novel.chapters.length === 0}
                 >
@@ -120,7 +123,10 @@ const NovelCard: React.FC<NovelCardProps> = ({ novel }) => {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={handleViewDetails}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewDetails();
+                  }}
                   className="border-border hover:bg-secondary"
                 >
                   View Details
