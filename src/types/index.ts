@@ -4,9 +4,16 @@ export interface Chapter {
   status: 'completed' | 'current' | 'pending';
   wordCount: number;
   progress: number; // 0-100
-  chunks: Chunk[];
+  pages: Page[];
   uploadedAt: Date;
   fileType: 'pdf' | 'epub' | 'txt';
+  rawContent?: string; // For text files that need pagination
+}
+
+export interface Page {
+  id: number;
+  chunks: Chunk[];
+  pageNumber: number;
 }
 
 export interface Chunk {

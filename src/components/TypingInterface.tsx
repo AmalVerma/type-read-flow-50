@@ -15,6 +15,7 @@ interface TypingInterfaceProps {
   initialNextPage: string[];
   onPageComplete?: (stats: TypingStats) => void;
   onChunkComplete?: (stats: TypingStats) => void;
+  currentPageNumber?: number;
 }
 
 // Placeholder function for getting next page
@@ -28,11 +29,12 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
   initialNextPage,
   onPageComplete,
   onChunkComplete,
+  currentPageNumber: propPageNumber = 1,
 }) => {
   const [currentPage, setCurrentPage] = useState<string[]>(initialCurrentPage);
   const [nextPage, setNextPage] = useState<string[]>(initialNextPage);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
-  const [currentPageNumber, setCurrentPageNumber] = useState(1);
+  const [currentPageNumber, setCurrentPageNumber] = useState(propPageNumber);
   const [userInput, setUserInput] = useState('');
   const [startTime, setStartTime] = useState<number | null>(null);
   const [stats, setStats] = useState<TypingStats>({
@@ -199,12 +201,31 @@ const TypingInterface: React.FC<TypingInterfaceProps> = ({
     );
   };
 
-  // Auto-focus input
+  // Auto-focus input and sync page number
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, []);
+
+  // Sync page number with prop
+  useEffect(() => {
+    setCurrentPageNumber(propPageNumber);
+    setCurrentPage(initialCurrentPage);
+    setNextPage(initialNextPage);
+    setCurrentChunkIndex(0);
+    setUserInput('');
+    setStartTime(null);
+    setIsComplete(false);
+    setStats({
+      wpm: 0,
+      accuracy: 0,
+      correctChars: 0,
+      incorrectChars: 0,
+      totalChars: 0,
+      timeElapsed: 0,
+    });
+  }, [propPageNumber, initialCurrentPage, initialNextPage]);
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6 space-y-6">

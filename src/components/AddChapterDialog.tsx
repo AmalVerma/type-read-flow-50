@@ -17,6 +17,7 @@ import { Plus, FileText, Upload } from 'lucide-react';
 import { Chapter } from '@/types';
 import { useChapters, useFileUpload } from '@/hooks/useIndexedDB';
 import { useToast } from '@/hooks/use-toast';
+import { paginateTextContent } from '@/utils/textPagination';
 
 interface AddChapterDialogProps {
   novelId: string;
@@ -158,8 +159,9 @@ const AddChapterDialog: React.FC<AddChapterDialogProps> = ({ novelId, trigger, o
     setIsSubmitting(true);
 
     try {
-      const chunks = formData.content ? chunkText(formData.content) : [];
-      const wordCount = chunks.reduce((acc, chunk) => acc + chunk.wordCount, 0);
+      const pages = formData.content ? paginateTextContent(formData.content) : [];
+      const wordCount = pages.reduce((acc, page) => 
+        acc + page.chunks.reduce((chunkAcc, chunk) => chunkAcc + chunk.wordCount, 0), 0);
 
       const newChapter: Chapter & { novelId: string } = {
         id: `chapter_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -168,7 +170,8 @@ const AddChapterDialog: React.FC<AddChapterDialogProps> = ({ novelId, trigger, o
         status: 'pending',
         wordCount,
         progress: 0,
-        chunks,
+        pages,
+        rawContent: formData.content,
         uploadedAt: new Date(),
         fileType: formData.fileType
       };
