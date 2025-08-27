@@ -5,11 +5,11 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, BookOpen, TrendingUp, Clock, Target } from 'lucide-react';
 import NovelCard from '@/components/NovelCard';
-import { mockNovels } from '@/data/mockData';
+import { useNovels } from '@/hooks/useIndexedDB';
 import { Novel } from '@/types';
 
 const Dashboard = () => {
-  const [novels] = useState<Novel[]>(mockNovels);
+  const { novels } = useNovels();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('');
 

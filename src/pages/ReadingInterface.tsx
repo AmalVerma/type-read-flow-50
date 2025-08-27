@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Book } from 'lucide-react';
 import TypingInterface from '@/components/TypingInterface';
-import { mockNovels } from '@/data/mockData';
+import { useNovels, useChapters } from '@/hooks/useIndexedDB';
 import { Novel, Chapter, TypingStats } from '@/types';
 
 const ReadingInterface = () => {
@@ -13,17 +13,27 @@ const ReadingInterface = () => {
   const [novel, setNovel] = useState<Novel | null>(null);
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
+  
+  const { novels } = useNovels();
+  const { chapters } = useChapters(novelId || '');
 
   useEffect(() => {
-    const foundNovel = mockNovels.find(n => n.id === novelId);
-    if (foundNovel) {
-      setNovel(foundNovel);
-      const foundChapter = foundNovel.chapters.find(c => c.id === chapterId);
+    if (novelId && novels.length > 0) {
+      const foundNovel = novels.find(n => n.id === novelId);
+      if (foundNovel) {
+        setNovel(foundNovel);
+      }
+    }
+  }, [novelId, novels]);
+
+  useEffect(() => {
+    if (chapterId && chapters.length > 0) {
+      const foundChapter = chapters.find(c => c.id === chapterId);
       if (foundChapter) {
         setChapter(foundChapter);
       }
     }
-  }, [novelId, chapterId]);
+  }, [chapterId, chapters]);
 
   if (!novel || !chapter) {
     return (
@@ -55,8 +65,8 @@ const ReadingInterface = () => {
     }, 2000);
   };
 
-  const currentChunk = chapter.chunks[currentChunkIndex];
-  const chapterNumber = novel.chapters.findIndex(c => c.id === chapterId) + 1;
+  const currentChunk = chapter?.chunks[currentChunkIndex];
+  const chapterNumber = chapters.findIndex(c => c.id === chapterId) + 1;
 
   if (!currentChunk) {
     return (

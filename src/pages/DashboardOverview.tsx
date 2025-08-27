@@ -55,20 +55,18 @@ const DashboardOverview = () => {
     novel.completedChapters > 0 && novel.completedChapters < novel.totalChapters
   ).slice(0, 3);
 
-  // Mock data for recent activity and quick stats
-  const recentActivity = [
-    { action: "Completed Chapter 5", novel: "The Great Gatsby", time: "2 hours ago", wpm: 65 },
-    { action: "Started new session", novel: "Pride and Prejudice", time: "5 hours ago", wpm: 58 },
-    { action: "Achieved 70 WPM", novel: "1984", time: "1 day ago", wpm: 70 },
-  ];
-
-  const weeklyGoals = {
-    chaptersGoal: 5,
-    chaptersCompleted: 3,
-    wpmGoal: 70,
-    currentWpm: 65,
-    minutesGoal: 300,
-    minutesCompleted: 180
+  // Default values when no data exists
+  const defaultStats = {
+    avgWpm: 0,
+    weeklyGoals: {
+      chaptersGoal: 5,
+      chaptersCompleted: 0,
+      wpmGoal: 70,
+      currentWpm: 0,
+      minutesGoal: 300,
+      minutesCompleted: 0
+    },
+    recentActivity: [] as { action: string; novel: string; time: string; wpm: number }[]
   };
 
   return (
@@ -120,7 +118,7 @@ const DashboardOverview = () => {
                 <Zap className="w-5 h-5 text-secondary-foreground" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-foreground">65</div>
+                <div className="text-2xl font-bold text-foreground">{defaultStats.avgWpm}</div>
                 <div className="text-sm text-muted-foreground">Avg WPM</div>
               </div>
             </div>
@@ -157,25 +155,25 @@ const DashboardOverview = () => {
               <div>
                 <div className="flex justify-between text-sm mb-2">
                   <span>Chapters Read</span>
-                  <span>{weeklyGoals.chaptersCompleted}/{weeklyGoals.chaptersGoal}</span>
+                  <span>{defaultStats.weeklyGoals.chaptersCompleted}/{defaultStats.weeklyGoals.chaptersGoal}</span>
                 </div>
-                <Progress value={(weeklyGoals.chaptersCompleted / weeklyGoals.chaptersGoal) * 100} />
+                <Progress value={(defaultStats.weeklyGoals.chaptersCompleted / defaultStats.weeklyGoals.chaptersGoal) * 100} />
               </div>
               
               <div>
                 <div className="flex justify-between text-sm mb-2">
                   <span>WPM Target</span>
-                  <span>{weeklyGoals.currentWpm}/{weeklyGoals.wpmGoal} WPM</span>
+                  <span>{defaultStats.weeklyGoals.currentWpm}/{defaultStats.weeklyGoals.wpmGoal} WPM</span>
                 </div>
-                <Progress value={(weeklyGoals.currentWpm / weeklyGoals.wpmGoal) * 100} />
+                <Progress value={(defaultStats.weeklyGoals.currentWpm / defaultStats.weeklyGoals.wpmGoal) * 100} />
               </div>
               
               <div>
                 <div className="flex justify-between text-sm mb-2">
                   <span>Reading Time</span>
-                  <span>{weeklyGoals.minutesCompleted}/{weeklyGoals.minutesGoal} min</span>
+                  <span>{defaultStats.weeklyGoals.minutesCompleted}/{defaultStats.weeklyGoals.minutesGoal} min</span>
                 </div>
-                <Progress value={(weeklyGoals.minutesCompleted / weeklyGoals.minutesGoal) * 100} />
+                <Progress value={(defaultStats.weeklyGoals.minutesCompleted / defaultStats.weeklyGoals.minutesGoal) * 100} />
               </div>
             </CardContent>
           </Card>
@@ -193,30 +191,38 @@ const DashboardOverview = () => {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
-                {currentlyReading.map((novel) => (
-                  <div key={novel.id} className="flex items-center space-x-4 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors cursor-pointer">
-                    <div className="w-12 h-16 bg-gradient-primary rounded flex items-center justify-center">
-                      <BookOpen className="w-6 h-6 text-primary-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium">{novel.title}</h4>
-                      <p className="text-sm text-muted-foreground">{novel.author}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Progress value={(novel.completedChapters / novel.totalChapters) * 100} className="flex-1 h-2" />
-                        <span className="text-xs text-muted-foreground">
-                          {novel.completedChapters}/{novel.totalChapters}
-                        </span>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      Continue
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
+             <CardContent>
+               {currentlyReading.length > 0 ? (
+                 <div className="grid gap-4">
+                   {currentlyReading.map((novel) => (
+                     <div key={novel.id} className="flex items-center space-x-4 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors cursor-pointer">
+                       <div className="w-12 h-16 bg-gradient-primary rounded flex items-center justify-center">
+                         <BookOpen className="w-6 h-6 text-primary-foreground" />
+                       </div>
+                       <div className="flex-1">
+                         <h4 className="font-medium">{novel.title}</h4>
+                         <p className="text-sm text-muted-foreground">{novel.author}</p>
+                         <div className="flex items-center space-x-2 mt-1">
+                           <Progress value={(novel.completedChapters / novel.totalChapters) * 100} className="flex-1 h-2" />
+                           <span className="text-xs text-muted-foreground">
+                             {novel.completedChapters}/{novel.totalChapters}
+                           </span>
+                         </div>
+                       </div>
+                       <Button variant="outline" size="sm">
+                         Continue
+                       </Button>
+                     </div>
+                   ))}
+                 </div>
+               ) : (
+                 <div className="text-center py-8">
+                   <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                   <p className="text-muted-foreground">No novels in progress yet.</p>
+                   <p className="text-sm text-muted-foreground">Add a novel to start reading!</p>
+                 </div>
+               )}
+             </CardContent>
           </Card>
         </div>
 
@@ -253,37 +259,46 @@ const DashboardOverview = () => {
             <CardHeader>
               <CardTitle className="text-lg">Recent Activity</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-start space-x-3 text-sm">
-                    <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="font-medium">{activity.action}</p>
-                      <p className="text-muted-foreground">{activity.novel}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <span className="text-xs text-muted-foreground">{activity.time}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {activity.wpm} WPM
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
+             <CardContent>
+               {defaultStats.recentActivity.length > 0 ? (
+                 <div className="space-y-3">
+                   {defaultStats.recentActivity.map((activity, index) => (
+                     <div key={index} className="flex items-start space-x-3 text-sm">
+                       <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0" />
+                       <div className="flex-1">
+                         <p className="font-medium">{activity.action}</p>
+                         <p className="text-muted-foreground">{activity.novel}</p>
+                         <div className="flex items-center space-x-2 mt-1">
+                           <span className="text-xs text-muted-foreground">{activity.time}</span>
+                           <Badge variant="secondary" className="text-xs">
+                             {activity.wpm} WPM
+                           </Badge>
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               ) : (
+                 <div className="text-center py-4">
+                   <Activity className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                   <p className="text-sm text-muted-foreground">No recent activity yet.</p>
+                 </div>
+               )}
+             </CardContent>
           </Card>
 
-          {/* Achievement */}
-          <Card className="bg-gradient-accent border-border/50">
-            <CardContent className="p-4 text-center">
-              <Trophy className="w-8 h-8 text-accent-foreground mx-auto mb-2" />
-              <h4 className="font-medium text-accent-foreground">Speed Demon!</h4>
-              <p className="text-sm text-accent-foreground/80 mt-1">
-                You've reached 70+ WPM this week
-              </p>
-            </CardContent>
-          </Card>
+           {/* Achievement - only show if there's data */}
+           {novels.length > 0 && (
+             <Card className="bg-gradient-accent border-border/50">
+               <CardContent className="p-4 text-center">
+                 <Trophy className="w-8 h-8 text-accent-foreground mx-auto mb-2" />
+                 <h4 className="font-medium text-accent-foreground">Getting Started!</h4>
+                 <p className="text-sm text-accent-foreground/80 mt-1">
+                   You've added your first novel
+                 </p>
+               </CardContent>
+             </Card>
+           )}
         </div>
       </div>
     </div>

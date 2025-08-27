@@ -1,9 +1,9 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
-import { seedDatabase } from './utils/seedData'
+import { initializeDatabase } from '@/utils/seedData'
 
-// Initialize database with sample data
-seedDatabase();
+// Initialize database
+initializeDatabase();
 
 createRoot(document.getElementById("root")!).render(<App />);

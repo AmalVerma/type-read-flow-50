@@ -1,34 +1,23 @@
 import { db } from '@/lib/indexeddb';
-import { mockNovels } from '@/data/mockData';
 
-export const seedDatabase = async () => {
+export const initializeDatabase = async () => {
   try {
     // Check if database already has data
     const existingNovels = await db.getAllNovels();
     
     if (existingNovels.length > 0) {
-      console.log('Database already has data, skipping seed');
+      console.log('Database already has data');
       return;
     }
 
-    console.log('Seeding database with sample data...');
-
-    // Add all mock novels to IndexedDB
-    for (const novel of mockNovels) {
-      await db.saveNovel(novel);
-      
-      // Add chapters for each novel
-      for (const chapter of novel.chapters) {
-        await db.saveChapter({
-          ...chapter,
-          novelId: novel.id
-        });
-      }
-    }
-
-    console.log('Database seeded successfully!');
+    console.log('Initializing empty database...');
+    
+    // Database is empty, we don't need to add anything
+    // The app will show empty states and users can add their own data
+    
+    console.log('Database initialized successfully!');
   } catch (error) {
-    console.error('Failed to seed database:', error);
+    console.error('Failed to initialize database:', error);
   }
 };
 
