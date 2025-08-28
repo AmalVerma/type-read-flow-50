@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import TypingInterface from '@/components/TypingInterface';
 import { useNovels, useChapters } from '@/hooks/useIndexedDB';
 import { Novel, Chapter, TypingStats, Page } from '@/types';
 import { getNextPage, getPreviousPage } from '@/utils/textPagination';
+import { useToast } from '@/hooks/use-toast';
 
 const ReadingInterface = () => {
   const { novelId, chapterId } = useParams<{ novelId: string; chapterId: string }>();
@@ -14,9 +16,10 @@ const ReadingInterface = () => {
   const [novel, setNovel] = useState<Novel | null>(null);
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const { toast } = useToast();
   
   const { novels } = useNovels();
-  const { chapters } = useChapters(novelId || '');
+  const { chapters, saveChapter } = useChapters(novelId || '');
 
   useEffect(() => {
     if (novelId && novels.length > 0) {
@@ -57,17 +60,47 @@ const ReadingInterface = () => {
   const chapterNumber = chapters.findIndex(c => c.id === chapterId) + 1;
   const totalPages = chapter.pages.length;
 
-  const handlePageComplete = (stats: TypingStats) => {
+  const handlePageComplete = async (stats: TypingStats) => {
     console.log('Page completed:', stats);
     
     // Move to next page after a delay
-    setTimeout(() => {
+    setTimeout(async () => {
       if (currentPageIndex < chapter.pages.length - 1) {
         setCurrentPageIndex(prev => prev + 1);
       } else {
-        // Chapter completed
-        alert('Chapter completed! 🎉');
-        navigate(`/novel/${novelId}`);
+        // Chapter completed - update status to 'completed'
+        try {
+          const updatedChapter = {
+            ...chapter,
+            status: 'completed' as const,
+            progress: 100,
+            novelId: novelId!
+          };
+          
+          const success = await saveChapter(updatedChapter);
+          
+          if (success) {
+            toast({
+              title: "Chapter Completed! 🎉",
+              description: `You've finished "${chapter.title}"`,
+            });
+          }
+          
+          setTimeout(() => {
+            navigate(`/novel/${novelId}`);
+          }, 1500);
+        } catch (error) {
+          console.error('Failed to update chapter status:', error);
+          toast({
+            title: "Chapter Completed! 🎉", 
+            description: `You've finished "${chapter.title}"`,
+            variant: "default"
+          });
+          
+          setTimeout(() => {
+            navigate(`/novel/${novelId}`);
+          }, 1500);
+        }
       }
     }, 2000);
   };
