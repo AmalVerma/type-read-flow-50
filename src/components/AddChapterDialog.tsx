@@ -167,7 +167,7 @@ const AddChapterDialog: React.FC<AddChapterDialogProps> = ({ novelId, trigger, o
         id: `chapter_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         novelId,
         title: formData.title.trim(),
-        status: 'pending',
+        status: 'current',
         wordCount,
         progress: 0,
         pages,
