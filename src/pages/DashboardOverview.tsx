@@ -186,8 +186,8 @@ const DashboardOverview = () => {
                   <BookOpen className="w-5 h-5 text-primary" />
                   <span>Continue Reading</span>
                 </CardTitle>
-                <Button variant="ghost" size="sm">
-                  View All <ChevronRight className="w-4 h-4 ml-1" />
+                <Button variant="ghost" size="sm" onClick={() => window.location.href = '/dashboard/library'}>
+                  View Library <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
             </CardHeader>
@@ -209,18 +209,29 @@ const DashboardOverview = () => {
                            </span>
                          </div>
                        </div>
-                       <Button variant="outline" size="sm">
-                         Continue
-                       </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => window.location.href = `/novel/${novel.id}`}
+                        >
+                          Continue
+                        </Button>
                      </div>
                    ))}
                  </div>
                ) : (
-                 <div className="text-center py-8">
-                   <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                   <p className="text-muted-foreground">No novels in progress yet.</p>
-                   <p className="text-sm text-muted-foreground">Add a novel to start reading!</p>
-                 </div>
+                  <div className="text-center py-8">
+                    <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No novels in progress yet.</p>
+                    <p className="text-sm text-muted-foreground mb-4">Add a novel and upload chapters to start reading!</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.location.href = '/dashboard/library'}
+                    >
+                      Go to Library
+                    </Button>
+                  </div>
                )}
              </CardContent>
           </Card>
@@ -243,9 +254,13 @@ const DashboardOverview = () => {
                   </Button>
                 }
               />
-              <Button variant="outline" className="w-full">
-                <Timer className="w-4 h-4 mr-2" />
-                Start Session
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => window.location.href = '/dashboard/library'}
+              >
+                <BookOpen className="w-4 h-4 mr-2" />
+                Manage Library
               </Button>
               <Button variant="outline" className="w-full">
                 <Activity className="w-4 h-4 mr-2" />
