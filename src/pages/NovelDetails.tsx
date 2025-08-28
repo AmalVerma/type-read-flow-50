@@ -14,7 +14,8 @@ import {
   FileText,
   Calendar,
   User,
-  Tag
+  Tag,
+  Trash2
 } from 'lucide-react';
 import { Novel, Chapter } from '@/types';
 import { useNovels, useChapters } from '@/hooks/useIndexedDB';
@@ -28,8 +29,8 @@ const NovelDetails = () => {
   const [novel, setNovel] = useState<Novel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  const { novels } = useNovels();
-  const { chapters, isLoading: chaptersLoading, refreshChapters } = useChapters(id || '');
+  const { novels, deleteNovel } = useNovels();
+  const { chapters, isLoading: chaptersLoading, refreshChapters, deleteChapter, moveChapter } = useChapters(id || '');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -56,6 +57,54 @@ const NovelDetails = () => {
   const handleStartReading = (chapterId: string) => {
     if (novel) {
       navigate(`/reading/${novel.id}/${chapterId}`);
+    }
+  };
+
+  const handleDeleteNovel = async () => {
+    if (novel && window.confirm(`Are you sure you want to delete "${novel.title}"? This will also delete all chapters.`)) {
+      const success = await deleteNovel(novel.id);
+      if (success) {
+        toast({
+          title: "Novel deleted",
+          description: "The novel and all its chapters have been deleted.",
+        });
+        navigate('/dashboard/library');
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete novel.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const handleDeleteChapter = async (chapterId: string, chapterTitle: string) => {
+    if (window.confirm(`Are you sure you want to delete "${chapterTitle}"?`)) {
+      const success = await deleteChapter(chapterId);
+      if (success) {
+        toast({
+          title: "Chapter deleted",
+          description: "The chapter has been deleted.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete chapter.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const handleMoveChapter = async (chapterId: string, direction: 'up' | 'down') => {
+    const success = await moveChapter(chapterId, direction);
+    if (!success) {
+      toast({
+        title: "Error",
+        description: "Failed to move chapter.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -96,6 +145,14 @@ const NovelDetails = () => {
         <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
           Novel Details
         </h1>
+        <Button 
+          variant="destructive" 
+          onClick={handleDeleteNovel}
+          className="ml-auto"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete Novel
+        </Button>
       </div>
 
       {/* Novel Info */}
@@ -248,6 +305,9 @@ const NovelDetails = () => {
                   novelId={novel.id}
                   chapterNumber={index + 1}
                   onStartReading={() => handleStartReading(chapter.id)}
+                  onDelete={() => handleDeleteChapter(chapter.id, chapter.title)}
+                  onMoveUp={index > 0 ? () => handleMoveChapter(chapter.id, 'up') : undefined}
+                  onMoveDown={index < chapters.length - 1 ? () => handleMoveChapter(chapter.id, 'down') : undefined}
                 />
               ))}
             </div>

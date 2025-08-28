@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Circle, Play, FileText, Clock } from 'lucide-react';
+import { CheckCircle2, Circle, Play, FileText, Clock, Trash2, ChevronUp, ChevronDown, MoreVertical } from 'lucide-react';
 import { Chapter } from '@/types';
 import { useNavigate } from 'react-router-dom';
 
@@ -12,9 +12,20 @@ interface ChapterCardProps {
   novelId: string;
   chapterNumber: number;
   onStartReading?: () => void;
+  onDelete?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }
 
-const ChapterCard: React.FC<ChapterCardProps> = ({ chapter, novelId, chapterNumber, onStartReading }) => {
+const ChapterCard: React.FC<ChapterCardProps> = ({ 
+  chapter, 
+  novelId, 
+  chapterNumber, 
+  onStartReading, 
+  onDelete, 
+  onMoveUp, 
+  onMoveDown 
+}) => {
   const navigate = useNavigate();
 
   const getStatusIcon = () => {
@@ -92,7 +103,7 @@ const ChapterCard: React.FC<ChapterCardProps> = ({ chapter, novelId, chapterNumb
             </div>
           </div>
           
-          <div className="text-right space-y-1">
+          <div className="flex items-center space-x-2">
             <Badge 
               variant={chapter.status === 'completed' ? 'default' : 'secondary'}
               className={
@@ -106,6 +117,41 @@ const ChapterCard: React.FC<ChapterCardProps> = ({ chapter, novelId, chapterNumb
               {chapter.status === 'completed' ? 'Completed' : 
                chapter.status === 'current' ? 'In Progress' : 'Pending'}
             </Badge>
+            
+            {/* Chapter Controls */}
+            <div className="flex flex-col space-y-1">
+              {onMoveUp && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onMoveUp}
+                  className="h-6 w-6 p-0 hover:bg-secondary"
+                >
+                  <ChevronUp className="w-3 h-3" />
+                </Button>
+              )}
+              {onMoveDown && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onMoveDown}
+                  className="h-6 w-6 p-0 hover:bg-secondary"
+                >
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
+            
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onDelete}
+                className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </div>
 

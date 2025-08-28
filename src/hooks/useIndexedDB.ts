@@ -90,6 +90,44 @@ export const useChapters = (novelId: string) => {
     }
   };
 
+  const deleteChapter = async (id: string) => {
+    try {
+      await db.delete('chapters', id);
+      await loadChapters(); // Refresh the list
+      return true;
+    } catch (err) {
+      setError('Failed to delete chapter');
+      console.error('Failed to delete chapter:', err);
+      return false;
+    }
+  };
+
+  const moveChapter = async (chapterId: string, direction: 'up' | 'down') => {
+    try {
+      const currentChapters = [...chapters];
+      const index = currentChapters.findIndex(ch => ch.id === chapterId);
+      
+      if (index === -1) return false;
+      
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= currentChapters.length) return false;
+      
+      // Swap chapters
+      [currentChapters[index], currentChapters[newIndex]] = [currentChapters[newIndex], currentChapters[index]];
+      
+      // Update both chapters in the database
+      await db.saveChapter({ ...currentChapters[index], novelId });
+      await db.saveChapter({ ...currentChapters[newIndex], novelId });
+      
+      await loadChapters(); // Refresh the list
+      return true;
+    } catch (err) {
+      setError('Failed to move chapter');
+      console.error('Failed to move chapter:', err);
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (novelId) {
       loadChapters();
@@ -101,6 +139,8 @@ export const useChapters = (novelId: string) => {
     isLoading,
     error,
     saveChapter,
+    deleteChapter,
+    moveChapter,
     refreshChapters: loadChapters
   };
 };
